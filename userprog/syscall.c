@@ -7,6 +7,8 @@
 #include "devices/input.h"
 #include "filesys/filesys.h"
 #include "userprog/process.h"
+#include <string.h>
+#include "filesys/file.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -27,6 +29,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 {
   check_valid_user_vaddr(f->esp);
 
+  /* project 1 */
+
   switch(*(uint32_t*)(f->esp)){
     case SYS_HALT: 
       halt();
@@ -43,14 +47,6 @@ syscall_handler (struct intr_frame *f UNUSED)
       check_valid_user_vaddr(f->esp + 4);
       f->eax = wait((pid_t)*(uint32_t *)(f->esp + 4));
       break;
-    case SYS_WRITE:
-      check_valid_user_vaddr(f->esp + 12);
-      f->eax = write((int)*(uint32_t*)(f->esp + 4), (void*)*(uint32_t*)(f->esp + 8), (unsigned)*((uint32_t*)(f->esp + 12)));
-      break;
-    case SYS_READ:
-      check_valid_user_vaddr(f->esp + 12); 
-      f->eax = read((int)*(uint32_t*)(f->esp + 4), (void*)*(uint32_t*)(f->esp + 8), (unsigned)*((uint32_t*)(f->esp + 12)));
-      break;
     case SYS_FIBONACCI:  
       check_valid_user_vaddr(f->esp + 4);
       f->eax = fibonacci(*(uint32_t*)(f->esp + 4));
@@ -59,8 +55,51 @@ syscall_handler (struct intr_frame *f UNUSED)
       check_valid_user_vaddr(f->esp + 16);
       f->eax = max_of_four_int(*(int32_t*)(f->esp + 4), *(int32_t*)(f->esp + 8), *(int32_t*)(f->esp + 12), *(int32_t*)(f->esp + 16));
       break;
+
+    /* project 2 */
+    
+    case SYS_WRITE:
+      check_valid_user_vaddr(f->esp + 12);
+      f->eax = write((int)*(uint32_t*)(f->esp + 4), (void*)*(uint32_t*)(f->esp + 8), (unsigned)*((uint32_t*)(f->esp + 12)));
+      break;
+    case SYS_READ:
+      check_valid_user_vaddr(f->esp + 12); 
+      f->eax = read((int)*(uint32_t*)(f->esp + 4), (void*)*(uint32_t*)(f->esp + 8), (unsigned)*((uint32_t*)(f->esp + 12)));
+      break;
+
+    case SYS_CREATE:
+      check_valid_user_vaddr(f->esp + 8); 
+      f->eax = create((char*)*(uint32_t*)(f->esp + 4), *(uint32_t*)(f->esp + 8));
+      break;
+    case SYS_OPEN:
+      check_valid_user_vaddr(f->esp + 4); 
+      f->eax = open((char*)*(uint32_t*)(f->esp + 4));
+      break;
+    case SYS_FILESIZE:
+      check_valid_user_vaddr(f->esp + 4); 
+      f->eax = filesize((int)*(uint32_t*)(f->esp + 4));
+      break;
+      /*
+    case SYS_CLOSE:
+      check_valid_user_vaddr(f->esp + 4); 
+      close((int)*(uint32_t*)(f->esp + 4));
+      break;
+    case SYS_REMOVE:
+      check_valid_user_vaddr(f->esp + 4); 
+      f->eax = remove((char*)*(uint32_t*)(f->esp + 4));
+      break;
+    case SYS_SEEK:
+      check_valid_user_vaddr(f->esp + 8); 
+      seek((int)*(uint32_t*)(f->esp + 4), (unsigned)*((uint32_t*)(f->esp + 8)));
+      break;
+    case SYS_TELL:
+      check_valid_user_vaddr(f->esp + 4); 
+      f->eax = tell((int)*(uint32_t*)(f->esp + 4));
+      break;*/
   }
 }
+
+/* project 1 */
 
 void halt(void){
   shutdown_power_off();
@@ -102,27 +141,6 @@ int wait (pid_t pid){
   return process_wait((tid_t)pid); 
 }
 
-int read (int fd, void *buffer, unsigned length){
-  switch(fd){
-    case 0:
-      for(int i = 0; i < length; i++){
-        *(char*)(buffer + i) = input_getc();
-      }
-      return length;
-    default:
-      return -1;
-  }
-} 
-
-int write (int fd, const void *buffer, unsigned length){
-  if(fd == 1){
-    putbuf(buffer, length);
-    return length;
-  }
-
-  return -1;
-}
-
 int fibonacci (int num){
   if(num < 2){
     return num;
@@ -147,3 +165,80 @@ int max_of_four_int (int num1, int num2, int num3, int num4){
   
   return num4 > res ? num4 : res;
 }
+
+/* project 2*/
+
+int read (int fd, void *buffer, unsigned length){
+  switch(fd){
+    case 0:
+      for(unsigned i = 0; i < length; i++){
+        *(char*)(buffer + i) = input_getc();
+      }
+      return length;
+    default:
+      return -1;
+  }
+} 
+
+int write (int fd, const void *buffer, unsigned length){
+  if(fd == 1){
+    putbuf(buffer, length);
+    return length;
+  }
+
+  return -1;
+}
+
+bool create (const char *file, unsigned initial_size){
+  if(file == NULL){
+    exit(-1);
+  }
+
+  return filesys_create(file, (off_t)initial_size);
+}
+
+int open (const char *file){
+  if(file == NULL){
+    exit(-1);
+  }
+
+  struct file *fp = filesys_open(file);
+
+  if(fp == NULL){
+    return -1;
+  }
+
+  int i;
+  for(i = 3; i < 128; i++){
+    if(thread_current()->fd[i] == NULL){
+      thread_current()->fd[i] = fp;
+      break;
+    }
+  }
+
+  if(i == 128){
+    return -1;
+  }
+
+  return i;
+}
+
+int filesize (int fd){
+  return file_length(thread_current()->fd[fd]);
+}
+/*
+void close (int fd){
+
+}
+
+
+bool remove (const char *file){
+  if(file == NULL){
+    exit(-1);
+  }
+
+}
+
+void seek (int fd, unsigned position);
+unsigned tell (int fd);
+*/

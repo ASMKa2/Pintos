@@ -475,6 +475,10 @@ init_thread (struct thread *t, const char *name, int priority)
   sema_init(&(t->sema_1), 0);
   sema_init(&(t->sema_2), 0);
   sema_init(&(t->sema_load), 0);
+
+  for(int i = 0; i < 128; i++){
+    t->fd[i] = NULL;
+  }
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
