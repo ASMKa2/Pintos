@@ -60,10 +60,12 @@ syscall_handler (struct intr_frame *f UNUSED)
     
     case SYS_WRITE:
       check_valid_user_vaddr(f->esp + 12);
+      check_valid_user_vaddr((void*)*(uint32_t*)(f->esp + 8));
       f->eax = write((int)*(uint32_t*)(f->esp + 4), (void*)*(uint32_t*)(f->esp + 8), (unsigned)*((uint32_t*)(f->esp + 12)));
       break;
     case SYS_READ:
       check_valid_user_vaddr(f->esp + 12); 
+      check_valid_user_vaddr((void*)*(uint32_t*)(f->esp + 8));
       f->eax = read((int)*(uint32_t*)(f->esp + 4), (void*)*(uint32_t*)(f->esp + 8), (unsigned)*((uint32_t*)(f->esp + 12)));
       break;
 
@@ -79,11 +81,12 @@ syscall_handler (struct intr_frame *f UNUSED)
       check_valid_user_vaddr(f->esp + 4); 
       f->eax = filesize((int)*(uint32_t*)(f->esp + 4));
       break;
-      /*
+      
     case SYS_CLOSE:
       check_valid_user_vaddr(f->esp + 4); 
       close((int)*(uint32_t*)(f->esp + 4));
       break;
+    /*
     case SYS_REMOVE:
       check_valid_user_vaddr(f->esp + 4); 
       f->eax = remove((char*)*(uint32_t*)(f->esp + 4));
@@ -110,6 +113,10 @@ void exit(int status){
   printf("%s: exit(%d)\n", cur_t->name, status);
 
   cur_t->exit_status = status; 
+
+  for(int i = 3; i < 128; i++){
+    close(i);
+  }
 
   thread_exit(); 
 }
@@ -169,15 +176,21 @@ int max_of_four_int (int num1, int num2, int num3, int num4){
 /* project 2*/
 
 int read (int fd, void *buffer, unsigned length){
-  switch(fd){
-    case 0:
-      for(unsigned i = 0; i < length; i++){
-        *(char*)(buffer + i) = input_getc();
-      }
-      return length;
-    default:
-      return -1;
+  if(fd == 0){
+    for(unsigned i = 0; i < length; i++){
+      *(char*)(buffer + i) = input_getc();
+    }
+
+    return length;
   }
+  if(fd <= 2){
+    return -1;
+  }
+  if(thread_current()->fd[fd] == NULL){
+    return -1;
+  }
+
+  return (int)file_read(thread_current()->fd[fd], buffer, length);
 } 
 
 int write (int fd, const void *buffer, unsigned length){
@@ -185,8 +198,14 @@ int write (int fd, const void *buffer, unsigned length){
     putbuf(buffer, length);
     return length;
   }
+  if(fd <= 2){
+    return -1;
+  }
+  if(thread_current()->fd[fd] == NULL){
+    return -1;
+  }
 
-  return -1;
+  return (int)file_write(thread_current()->fd[fd], buffer, length);
 }
 
 bool create (const char *file, unsigned initial_size){
@@ -226,12 +245,12 @@ int open (const char *file){
 int filesize (int fd){
   return file_length(thread_current()->fd[fd]);
 }
-/*
-void close (int fd){
 
+void close (int fd){
+  thread_current()->fd[fd] = NULL;
 }
 
-
+/*
 bool remove (const char *file){
   if(file == NULL){
     exit(-1);
