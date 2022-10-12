@@ -250,14 +250,28 @@ void close (int fd){
   thread_current()->fd[fd] = NULL;
 }
 
-/*
 bool remove (const char *file){
   if(file == NULL){
     exit(-1);
   }
 
+  //TODO
+
+  return true;
 }
 
-void seek (int fd, unsigned position);
-unsigned tell (int fd);
-*/
+void seek (int fd, unsigned position){
+  if(thread_current()->fd[fd] == NULL){
+    exit(-1);
+  }
+
+  file_seek(thread_current()->fd[fd], position);
+}
+
+unsigned tell (int fd){
+  if(thread_current()->fd[fd] == NULL){
+    exit(-1);
+  }
+
+  return (unsigned)file_tell(thread_current()->fd[fd]);
+}
