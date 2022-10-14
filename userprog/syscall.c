@@ -9,7 +9,12 @@
 #include "userprog/process.h"
 #include <string.h>
 #include "filesys/file.h"
-
+struct file 
+  {
+    struct inode *inode;        /* File's inode. */
+    off_t pos;                  /* Current position. */
+    bool deny_write;            /* Has file_deny_write() been called? */
+  };
 static void syscall_handler (struct intr_frame *);
 
 void check_valid_user_vaddr(const void *addr){
@@ -86,7 +91,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       check_valid_user_vaddr(f->esp + 4); 
       close((int)*(uint32_t*)(f->esp + 4));
       break;
-    /*
+    
     case SYS_REMOVE:
       check_valid_user_vaddr(f->esp + 4); 
       f->eax = remove((char*)*(uint32_t*)(f->esp + 4));
@@ -98,7 +103,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_TELL:
       check_valid_user_vaddr(f->esp + 4); 
       f->eax = tell((int)*(uint32_t*)(f->esp + 4));
-      break;*/
+      break;
   }
 }
 
@@ -113,10 +118,6 @@ void exit(int status){
   printf("%s: exit(%d)\n", cur_t->name, status);
 
   cur_t->exit_status = status; 
-
-  for(int i = 3; i < 128; i++){
-    close(i);
-  }
 
   thread_exit(); 
 }
@@ -176,36 +177,54 @@ int max_of_four_int (int num1, int num2, int num3, int num4){
 /* project 2*/
 
 int read (int fd, void *buffer, unsigned length){
+  lock_acquire(&file_access_lock);
+
   if(fd == 0){
     for(unsigned i = 0; i < length; i++){
       *(char*)(buffer + i) = input_getc();
     }
 
+    lock_release(&file_access_lock);
     return length;
   }
   if(fd <= 2){
+    lock_release(&file_access_lock);
     return -1;
   }
   if(thread_current()->fd[fd] == NULL){
+    lock_release(&file_access_lock);
     return -1;
   }
 
+  lock_release(&file_access_lock);
   return (int)file_read(thread_current()->fd[fd], buffer, length);
 } 
 
 int write (int fd, const void *buffer, unsigned length){
+  lock_acquire(&file_access_lock);
+
   if(fd == 1){
+    lock_release(&file_access_lock);
     putbuf(buffer, length);
     return length;
   }
   if(fd <= 2){
+    lock_release(&file_access_lock);
     return -1;
   }
   if(thread_current()->fd[fd] == NULL){
+    lock_release(&file_access_lock);
     return -1;
   }
 
-  return (int)file_write(thread_current()->fd[fd], buffer, length);
+  if(is_write_denied(thread_current()->fd[fd])){
+    file_deny_write(thread_current()->fd[fd]);
+  }
+
+  int retval = (int)file_write(thread_current()->fd[fd], buffer, length);
+
+  lock_release(&file_access_lock);
+  return retval;
 }
 
 bool create (const char *file, unsigned initial_size){
@@ -221,20 +240,27 @@ int open (const char *file){
     exit(-1);
   }
 
+  lock_acquire(&file_access_lock);
+
   struct file *fp = filesys_open(file);
 
   if(fp == NULL){
+    lock_release(&file_access_lock);
     return -1;
   }
 
   int i;
   for(i = 3; i < 128; i++){
     if(thread_current()->fd[i] == NULL){
+      if(strcmp(thread_current()->name, file) == 0){
+        file_deny_write(fp);
+      }
       thread_current()->fd[i] = fp;
       break;
     }
   }
 
+  lock_release(&file_access_lock);
   if(i == 128){
     return -1;
   }
@@ -243,6 +269,10 @@ int open (const char *file){
 }
 
 int filesize (int fd){
+  if(thread_current()->fd[fd] == NULL){
+    exit(-1);
+  }
+
   return file_length(thread_current()->fd[fd]);
 }
 

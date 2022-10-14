@@ -16,6 +16,8 @@
 #include "threads/interrupt.h"
 #include "threads/palloc.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
+#include "userprog/syscall.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -137,6 +139,11 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+  /* close every file opened by this process */
+  for(int i = 3; i < 128; i++){
+    close(i);
+  }
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -153,6 +160,10 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+
+  struct file *fp = filesys_open(cur->name); 
+  file_allow_write(fp);
+  file_close(fp);
 
   sema_up(&(cur->sema_1));
   sema_down(&(cur->sema_2));
@@ -273,13 +284,19 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   parsed[i] = '\0';
   
+  lock_acquire(&file_access_lock);
   /* Open executable file. */
   file = filesys_open (parsed);
   if (file == NULL) 
     {
+      lock_release(&file_access_lock);
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
+  
+  file_deny_write(file);
+
+  lock_release(&file_access_lock);
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr

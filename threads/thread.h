@@ -113,12 +113,16 @@ struct thread
     struct semaphore sema_load;         /* synch for parent process waiting child process loaded */
 
     struct file *fd[128];                        /* a process can open max 128 files */
+
   };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+/* Used when a process is accessing a file to load is as an executable */
+struct lock file_access_lock;
 
 void thread_init (void);
 void thread_start (void);

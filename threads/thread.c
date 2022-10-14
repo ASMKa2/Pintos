@@ -98,6 +98,9 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+
+  /* Set up a lock for loading executable file */
+  lock_init(&file_access_lock);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.

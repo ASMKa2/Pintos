@@ -166,3 +166,10 @@ file_tell (struct file *file)
   ASSERT (file != NULL);
   return file->pos;
 }
+
+/* returns true if writing to FILE is denied */
+bool 
+is_write_denied (struct file *file)
+{
+  return inode_write_denied(file->inode) || file->deny_write;
+}
