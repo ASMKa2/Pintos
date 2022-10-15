@@ -250,9 +250,6 @@ int open (const char *file){
   int i;
   for(i = 3; i < 128; i++){
     if(thread_current()->fd[i] == NULL){
-      if(strcmp(thread_current()->name, file) == 0){
-        file_deny_write(fp);
-      }
       thread_current()->fd[i] = fp;
       break;
     }
