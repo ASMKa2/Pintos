@@ -171,5 +171,5 @@ file_tell (struct file *file)
 bool 
 is_write_denied (struct file *file)
 {
-  return inode_write_denied(file->inode) || file->deny_write;
+  return file->deny_write;
 }

@@ -343,8 +343,3 @@ inode_length (const struct inode *inode)
 {
   return inode->data.length;
 }
-
-/* Returns true if write to inode is denied */
-bool inode_write_denied(struct inode *inode){
-  return inode->deny_write_cnt > inode->open_cnt;
-}

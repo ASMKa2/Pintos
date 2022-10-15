@@ -112,8 +112,9 @@ struct thread
     struct semaphore sema_2;            /* synch for child process waiting to be removed parent process removes child from child_list */
     struct semaphore sema_load;         /* synch for parent process waiting child process loaded */
 
-    struct file *fd[128];                        /* a process can open max 128 files */
+    struct file *fd[128];               /* a process can open max 128 files */
 
+    struct file *running_file;          /* executable file of this thread */
   };
 
 /* If false (default), use round-robin scheduler.

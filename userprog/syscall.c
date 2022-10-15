@@ -207,18 +207,16 @@ int write (int fd, const void *buffer, unsigned length){
     lock_release(&file_access_lock);
     putbuf(buffer, length);
     return length;
-  }
+  } 
+
   if(fd <= 2){
     lock_release(&file_access_lock);
     return -1;
   }
+
   if(thread_current()->fd[fd] == NULL){
     lock_release(&file_access_lock);
     return -1;
-  }
-
-  if(is_write_denied(thread_current()->fd[fd])){
-    file_deny_write(thread_current()->fd[fd]);
   }
 
   int retval = (int)file_write(thread_current()->fd[fd], buffer, length);
@@ -277,6 +275,7 @@ int filesize (int fd){
 }
 
 void close (int fd){
+  file_close(thread_current()->fd[fd]);
   thread_current()->fd[fd] = NULL;
 }
 
@@ -291,7 +290,7 @@ bool remove (const char *file){
 }
 
 void seek (int fd, unsigned position){
-  if(thread_current()->fd[fd] == NULL){
+  if(thread_current()->fd[fd] == NULL){ 
     exit(-1);
   }
 
