@@ -161,9 +161,7 @@ process_exit (void)
       pagedir_destroy (pd);
     }
 
-  struct file *fp = filesys_open(cur->name); 
-  file_allow_write(fp);
-  file_close(fp);
+  file_close(cur->running_file);
 
   sema_up(&(cur->sema_1));
   sema_down(&(cur->sema_2));
@@ -294,6 +292,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
       goto done; 
     }
   
+  thread_current()->running_file = filesys_open(parsed); 
+  file_deny_write(thread_current()->running_file);
   file_deny_write(file);
 
   lock_release(&file_access_lock);
