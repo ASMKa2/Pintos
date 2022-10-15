@@ -115,6 +115,8 @@ struct thread
     struct file *fd[128];               /* a process can open max 128 files */
 
     struct file *running_file;          /* executable file of this thread */
+
+    bool load_success;                  /* flag for load success/fail */
   };
 
 /* If false (default), use round-robin scheduler.

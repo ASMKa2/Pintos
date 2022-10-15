@@ -34,7 +34,7 @@ process_execute (const char *file_name)
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page (0);
+  fn_copy = palloc_get_page (0); 
   if (fn_copy == NULL)
     return TID_ERROR;
 
@@ -58,9 +58,13 @@ process_execute (const char *file_name)
         struct thread *t = list_entry(e, struct thread, child_list_elem);
         if(t->tid == tid){
           sema_down(&(t->sema_load));
+          if(!t->load_success){
+            return -1;
+          }
+          break;
         }
       }
-  
+
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -81,13 +85,15 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
-   
+  thread_current()->load_success = success;
+
   sema_up(&(thread_current()->sema_load));
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success) {
     thread_exit ();
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -140,7 +146,7 @@ process_exit (void)
   uint32_t *pd;
 
   /* close every file opened by this process */
-  for(int i = 3; i < 128; i++){
+  for(int i = 2; i < 128; i++){
     close(i);
   }
 
