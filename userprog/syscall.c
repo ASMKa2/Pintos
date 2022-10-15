@@ -281,9 +281,13 @@ bool remove (const char *file){
     exit(-1);
   }
 
-  //TODO
+  lock_acquire(&file_access_lock);
 
-  return true;
+  bool retval = filesys_remove(file);
+
+  lock_release(&file_access_lock);
+
+  return retval;
 }
 
 void seek (int fd, unsigned position){
