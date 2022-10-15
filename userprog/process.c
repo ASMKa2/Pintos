@@ -146,7 +146,7 @@ process_exit (void)
   uint32_t *pd;
 
   /* close every file opened by this process */
-  for(int i = 2; i < 128; i++){
+  for(int i = 3; i < 128; i++){
     close(i);
   }
 

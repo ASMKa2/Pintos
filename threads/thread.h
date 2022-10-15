@@ -124,7 +124,7 @@ struct thread
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
 
-/* Used when a process is accessing a file to load is as an executable */
+/* Used when a process is accessing the file system */
 struct lock file_access_lock;
 
 void thread_init (void);

@@ -9,12 +9,7 @@
 #include "userprog/process.h"
 #include <string.h>
 #include "filesys/file.h"
-struct file 
-  {
-    struct inode *inode;        /* File's inode. */
-    off_t pos;                  /* Current position. */
-    bool deny_write;            /* Has file_deny_write() been called? */
-  };
+
 static void syscall_handler (struct intr_frame *);
 
 void check_valid_user_vaddr(const void *addr){
@@ -36,7 +31,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   /* project 1 */
 
-  switch(*(uint32_t*)(f->esp)){
+  switch(*(uint32_t*)(f->esp)){ 
     case SYS_HALT: 
       halt();
       break;
@@ -257,6 +252,7 @@ int open (const char *file){
 
   lock_release(&file_access_lock);
   if(i == 128){
+    file_close(fp); 
     return -1;
   }
 
