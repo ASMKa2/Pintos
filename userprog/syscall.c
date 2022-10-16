@@ -191,16 +191,20 @@ int read (int fd, void *buffer, unsigned length){
     return -1;
   }
 
+  int retval = (int)file_read(thread_current()->fd[fd], buffer, length);
+
   lock_release(&file_access_lock);
-  return (int)file_read(thread_current()->fd[fd], buffer, length);
+
+  return retval;
 } 
 
 int write (int fd, const void *buffer, unsigned length){
   lock_acquire(&file_access_lock);
 
   if(fd == 1){
-    lock_release(&file_access_lock);
     putbuf(buffer, length);
+    
+    lock_release(&file_access_lock);
     return length;
   } 
 
@@ -287,7 +291,7 @@ bool remove (const char *file){
 }
 
 void seek (int fd, unsigned position){
-  if(thread_current()->fd[fd] == NULL){ 
+  if(thread_current()->fd[fd] == NULL || position < 0){ 
     exit(-1);
   }
 
