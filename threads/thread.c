@@ -71,6 +71,22 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+void thread_sleep(int64_t wakeup_tick){
+  enum intr_level old_level;
+
+  ASSERT (intr_get_level () == INTR_ON);
+  old_level = intr_disable();
+  thread_current()->wakeup_time = wakeup_tick;
+
+  if(min_wakeup_tick > wakeup_tick){
+    min_wakeup_tick = wakeup_tick;
+  }
+
+  list_push_back(&sleep_list, &thread_current()->elem);
+  thread_block();
+  intr_set_level(old_level);
+}
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -101,6 +117,10 @@ thread_init (void)
 
   /* Set up a lock for loading executable file */
   lock_init(&file_access_lock);
+
+  list_init(&sleep_list);
+  MAX_INT64 = (1L << 63) - 1;
+  min_wakeup_tick = MAX_INT64;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.

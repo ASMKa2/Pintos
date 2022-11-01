@@ -117,6 +117,8 @@ struct thread
     struct file *running_file;          /* executable file of this thread */
 
     bool load_success;                  /* flag for load success/fail */
+
+    int64_t wakeup_time;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -126,6 +128,12 @@ extern bool thread_mlfqs;
 
 /* Used when a process is accessing the file system */
 struct lock file_access_lock;
+
+struct list sleep_list;
+int64_t min_wakeup_tick;
+int64_t MAX_INT64;
+
+void thread_sleep(int64_t);
 
 void thread_init (void);
 void thread_start (void);

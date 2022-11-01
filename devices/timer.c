@@ -90,10 +90,8 @@ void
 timer_sleep (int64_t ticks) 
 {
   int64_t start = timer_ticks ();
-
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  
+  thread_sleep(start + ticks);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -170,7 +168,28 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+  struct thread* t;
+  struct list_elem* e;
   ticks++;
+ 
+  if(min_wakeup_tick <= ticks){
+    min_wakeup_tick = MAX_INT64;
+
+    for (e=list_begin(&sleep_list); e!=list_end(&sleep_list); ) {
+      t = list_entry(e, struct thread, elem);
+ 
+      if (t->wakeup_time <= ticks) {
+        e = list_remove(e);
+        thread_unblock(t);
+      } else {
+        if(min_wakeup_tick > t->wakeup_time){
+          min_wakeup_tick = t->wakeup_time;
+        }
+        e = list_next(e);
+      }   
+    }
+  }
+
   thread_tick ();
 }
 
