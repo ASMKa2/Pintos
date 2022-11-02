@@ -118,7 +118,7 @@ struct thread
 
     bool load_success;                  /* flag for load success/fail */
 
-    int64_t wakeup_time;
+    int64_t wakeup_tick;                /* wakeup time when the thread is sleeping */
   };
 
 /* If false (default), use round-robin scheduler.
@@ -129,8 +129,13 @@ extern bool thread_mlfqs;
 /* Used when a process is accessing the file system */
 struct lock file_access_lock;
 
-struct list sleep_list;
+/* Stores sleeping thread list */
+struct list sleep_thread_list;
+
+/* the minimum wakeup time among the sleeping threads */
 int64_t min_wakeup_tick;
+
+/* the maximum tick */
 int64_t MAX_INT64;
 
 void thread_sleep(int64_t);

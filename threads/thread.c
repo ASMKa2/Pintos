@@ -76,13 +76,13 @@ void thread_sleep(int64_t wakeup_tick){
 
   ASSERT (intr_get_level () == INTR_ON);
   old_level = intr_disable();
-  thread_current()->wakeup_time = wakeup_tick;
+  thread_current()->wakeup_tick = wakeup_tick;
 
   if(min_wakeup_tick > wakeup_tick){
     min_wakeup_tick = wakeup_tick;
   }
 
-  list_push_back(&sleep_list, &thread_current()->elem);
+  list_push_back(&sleep_thread_list, &thread_current()->elem);
   thread_block();
   intr_set_level(old_level);
 }
@@ -118,7 +118,8 @@ thread_init (void)
   /* Set up a lock for loading executable file */
   lock_init(&file_access_lock);
 
-  list_init(&sleep_list);
+  /* Set up sleeping thread and related variables */
+  list_init(&sleep_thread_list);
   MAX_INT64 = (1L << 63) - 1;
   min_wakeup_tick = MAX_INT64;
 }
