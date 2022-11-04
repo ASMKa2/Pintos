@@ -22,7 +22,7 @@
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
-static struct list ready_list;
+static struct list ready_list; 
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -70,6 +70,7 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+bool cmp_priority(const struct list_elem *e1, const struct list_elem *e2, void *aux UNUSED);
 
 void thread_sleep(int64_t wakeup_tick){
   enum intr_level old_level;
@@ -85,6 +86,13 @@ void thread_sleep(int64_t wakeup_tick){
   list_push_back(&sleep_thread_list, &thread_current()->elem);
   thread_block();
   intr_set_level(old_level);
+}
+
+bool cmp_priority(const struct list_elem *e1, const struct list_elem *e2, void *aux UNUSED){
+  struct thread *t1 = list_entry(e1, struct thread, elem);
+  struct thread *t2 = list_entry(e2, struct thread, elem);
+
+  return t1->priority > t2->priority;
 }
 
 /* Initializes the threading system by transforming the code
@@ -225,6 +233,10 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if(priority > thread_get_priority()){
+    thread_yield();
+  } 
+
   return tid;
 }
 
@@ -240,7 +252,7 @@ thread_block (void)
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
-  thread_current ()->status = THREAD_BLOCKED;
+  thread_current ()->status = THREAD_BLOCKED; 
   schedule ();
 }
 
@@ -261,7 +273,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered (&ready_list, &t->elem, cmp_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -332,7 +344,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered (&ready_list, &cur->elem, cmp_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -359,7 +371,13 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  int pre_priority = thread_current()->priority;
+
   thread_current ()->priority = new_priority;
+
+  if(new_priority < pre_priority){
+    thread_yield();
+  }
 }
 
 /* Returns the current thread's priority. */
