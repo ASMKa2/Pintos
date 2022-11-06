@@ -6,6 +6,11 @@
 #include <stdint.h>
 #include <threads/synch.h>
 
+#ifndef USERPROG
+/* Project #3. */
+extern bool thread_prior_aging;
+#endif
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -119,6 +124,9 @@ struct thread
     bool load_success;                  /* flag for load success/fail */
 
     int64_t wakeup_tick;                /* wakeup time when the thread is sleeping */
+
+    int nice;
+    int recent_cpu;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -138,7 +146,11 @@ int64_t min_wakeup_tick;
 /* the maximum tick */
 int64_t MAX_INT64;
 
+/* system wide load average */
+int load_avg;
+
 void thread_sleep(int64_t);
+void thread_aging(bool, bool);
 
 void thread_init (void);
 void thread_start (void);
