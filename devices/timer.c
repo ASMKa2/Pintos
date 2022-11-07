@@ -172,24 +172,21 @@ timer_interrupt (struct intr_frame *args UNUSED)
   struct list_elem* e;
   ticks++;
  
-  if(min_wakeup_tick <= ticks){
-    min_wakeup_tick = MAX_INT64;
+  //if(min_wakeup_tick <= ticks){
+    //min_wakeup_tick = MAX_INT64;
 
     for (e = list_begin(&sleep_thread_list); 
     e != list_end(&sleep_thread_list); ) {
       t = list_entry(e, struct thread, elem);
  
-      if (t->wakeup_tick <= ticks) {
-        e = list_remove(e);
-        thread_unblock(t);
-      } else {
-        if(min_wakeup_tick > t->wakeup_tick){
-          min_wakeup_tick = t->wakeup_tick;
-        }
-        e = list_next(e);
-      }   
+      if (t->wakeup_tick > ticks) {
+        break;
+      }
+      
+      e = list_remove(e);
+      thread_unblock(t);
     }
-  }
+  //}
 
   thread_tick ();
 }

@@ -20,11 +20,15 @@ int32_t int_sub_float(int32_t, int32_t);
 
 #define FRACTION_BITS 14
 
+int half = 1 << 13;
+
 int32_t int_to_float(int32_t i){
     return i << FRACTION_BITS;
 }
 
 int32_t float_round(int32_t f){
+    return (f + half) >> FRACTION_BITS;
+
     if(f >= 0){
         return (f + (1 << (FRACTION_BITS - 1))) >> FRACTION_BITS;
     }

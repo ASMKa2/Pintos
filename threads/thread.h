@@ -150,7 +150,7 @@ int64_t MAX_INT64;
 int load_avg;
 
 void thread_sleep(int64_t);
-void thread_aging(bool, bool);
+void thread_aging(void);
 
 void thread_init (void);
 void thread_start (void);
