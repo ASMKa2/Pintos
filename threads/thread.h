@@ -140,12 +140,6 @@ struct lock file_access_lock;
 /* Stores sleeping thread list */
 struct list sleep_thread_list;
 
-/* the minimum wakeup time among the sleeping threads */
-int64_t min_wakeup_tick;
-
-/* the maximum tick */
-int64_t MAX_INT64;
-
 /* system wide load average */
 int load_avg;
 

@@ -87,10 +87,6 @@ void thread_sleep(int64_t wakeup_tick){
   old_level = intr_disable();
   thread_current()->wakeup_tick = wakeup_tick;
 
-  //if(min_wakeup_tick > wakeup_tick){
-   // min_wakeup_tick = wakeup_tick;
-  //}
-
   list_insert_ordered(&sleep_thread_list, &thread_current()->elem, cmp_wakeup_tick, NULL);
   thread_block();
   intr_set_level(old_level);
@@ -148,10 +144,8 @@ thread_init (void)
   /* Set up a lock for loading executable file */
   lock_init(&file_access_lock);
 
-  /* Set up sleeping thread and related variables */
+  /* Set up list for sleeping thread */
   list_init(&sleep_thread_list);
-  MAX_INT64 = (1L << 63) - 1;
-  min_wakeup_tick = MAX_INT64;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -251,6 +245,8 @@ void thread_aging(void){
         t->priority = PRI_MIN;
       }
     }
+
+    list_sort(&ready_list, cmp_priority, NULL);
 
     intr_yield_on_return();
   }
@@ -420,7 +416,7 @@ thread_exit (void)
 void
 thread_yield (void) 
 {
-  struct thread *cur = thread_current ();
+  struct thread *cur = thread_current (); 
   enum intr_level old_level;
   
   ASSERT (!intr_context ());
