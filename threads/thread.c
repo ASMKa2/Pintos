@@ -472,10 +472,6 @@ thread_set_nice (int nice UNUSED)
 {
   struct thread *t = thread_current();
 
-  if(t == idle_thread){
-    return;
-  }
-
   enum intr_level old_level = intr_disable();
 
   t->nice = nice;
