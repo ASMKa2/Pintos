@@ -136,10 +136,11 @@ sema_up (struct semaphore *sema)
 
     ASSERT(max_t != NULL);
     thread_unblock (max_t);
+
   }
   sema->value++;
 
-  thread_yield();
+  //thread_yield();
 
   intr_set_level (old_level);
 }

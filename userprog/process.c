@@ -21,6 +21,7 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+static bool setup_stack (void **esp);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -78,6 +79,8 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+
+  vm_init(&thread_current()->vm);
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -149,6 +152,8 @@ process_exit (void)
   for(int i = 3; i < 128; i++){
     close(i);
   }
+
+  vm_destroy(&thread_current()->vm);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -516,6 +521,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (ofs % PGSIZE == 0);
 
   file_seek (file, ofs);
+
+  struct file *file2 = file_reopen(file);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
       /* Calculate how to fill this page.
@@ -524,29 +531,29 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-      /* Get a page of memory. */
-      uint8_t *kpage = palloc_get_page (PAL_USER);
-      if (kpage == NULL)
+      /* allocate vm_entry */
+      struct vm_entry *vme = malloc(sizeof(struct vm_entry));
+      if(vme == NULL){ /* failed to allocate memory */
         return false;
+      }
 
-      /* Load this page. */
-      if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
-        {
-          palloc_free_page (kpage);
-          return false; 
-        }
-      memset (kpage + page_read_bytes, 0, page_zero_bytes);
+      /* initialize vm_entry */
+      vme->type = VM_BIN;
+      vme->writable = writable;
+      vme->is_loaded = false;
+      vme->file = file2;
+      vme->offset = ofs;
+      vme->read_bytes = page_read_bytes;
+      vme->zero_bytes = page_zero_bytes;
+      vme->vaddr = upage;
 
-      /* Add the page to the process's address space. */
-      if (!install_page (upage, kpage, writable)) 
-        {
-          palloc_free_page (kpage);
-          return false; 
-        }
+      /*insert vm_entry to hash table vm */
+      ASSERT(vm_insert_entry(&thread_current()->vm, vme) == true);
 
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
+      ofs += page_read_bytes;
       upage += PGSIZE;
     }
   return true;
@@ -569,6 +576,23 @@ setup_stack (void **esp)
       else
         palloc_free_page (kpage);
     }
+  
+  /* allocate vm_entry */
+  struct vm_entry *vme = malloc(sizeof(struct vm_entry));
+  if(vme == NULL){
+    palloc_free_page(kpage);
+    return false;
+  }
+
+  /* initialize vm_entry */
+  vme->type = VM_SWAP;
+  vme->vaddr = pg_round_down(((uint8_t *) PHYS_BASE) - PGSIZE);
+  vme->writable = true;
+  vme->is_loaded = true;
+
+  /* insert vm_entry to hash table vm */
+  vm_insert_entry(&thread_current()->vm, vme);
+
   return success;
 }
 
@@ -590,4 +614,27 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+bool handle_mm_fault(struct vm_entry *vme){
+  void *p = palloc_get_page(PAL_USER);
+  if(p == NULL){
+    // 추후 page replacement 로 수정
+    return false;
+  }
+
+  switch(vme->type){
+    case VM_BIN:
+      load_file(p, vme);
+      break;
+    default:
+      break;
+  }
+
+  if(!install_page(vme->vaddr, p, vme->writable)){
+    palloc_free_page(p);
+    return false;
+  }
+  vme->is_loaded = true;
+  return true;
 }

@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include <threads/synch.h>
+#include "lib/kernel/hash.h"
 
 #ifndef USERPROG
 /* Project #3. */
@@ -99,11 +100,11 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-#ifdef USERPROG
+//#ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 
-    #endif
+   // #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
@@ -127,6 +128,8 @@ struct thread
 
     int nice;
     int recent_cpu;
+
+    struct hash vm;                     /* hash table to manage vm space for thread */
   };
 
 /* If false (default), use round-robin scheduler.
