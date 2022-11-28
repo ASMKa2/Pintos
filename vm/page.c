@@ -12,10 +12,12 @@ static unsigned vm_hash_func(const struct hash_elem *, void *);
 static bool vm_cmp_vaddr(const struct hash_elem *, const struct hash_elem *);
 static void vm_destroy_func(struct hash_elem *, void *);
 
+/* initialize vm */
 void vm_init(struct hash *vm){
     hash_init(vm, vm_hash_func, vm_cmp_vaddr, NULL);
 }
 
+/* insert vm_entry to vm */
 bool vm_insert_entry(struct hash *vm, struct vm_entry *vme){
     if(hash_insert(vm, &vme->elem) == NULL){
         return true;
@@ -23,6 +25,7 @@ bool vm_insert_entry(struct hash *vm, struct vm_entry *vme){
     return false;
 }
 
+/* delete vm_entry from vm */
 bool vm_delete_entry(struct hash *vm, struct vm_entry *vme){
     if(hash_delete(vm, &vme->elem) == NULL){
         return true;
@@ -30,10 +33,12 @@ bool vm_delete_entry(struct hash *vm, struct vm_entry *vme){
     return false;
 }
 
+/* hash function for vm */
 static unsigned vm_hash_func(const struct hash_elem *e, void *aux UNUSED){
     return hash_int((int)hash_int(hash_entry(e, struct vm_entry, elem)->vaddr));
 }
 
+/* compare to hash elements by their vaddr */
 static bool vm_cmp_vaddr(const struct hash_elem *e1, const struct hash_elem *e2){
     int vaddr1 = (int)hash_int(hash_entry(e1, struct vm_entry, elem)->vaddr);
     int vaddr2 = (int)hash_int(hash_entry(e2, struct vm_entry, elem)->vaddr);
@@ -41,6 +46,7 @@ static bool vm_cmp_vaddr(const struct hash_elem *e1, const struct hash_elem *e2)
     return vaddr1 < vaddr2;
 }
 
+/* find vm_entry from vm by virtual address */
 struct vm_entry *vm_find_entry(void *vaddr){
     struct vm_entry vme;
     vme.vaddr = pg_round_down(vaddr);
@@ -53,10 +59,12 @@ struct vm_entry *vm_find_entry(void *vaddr){
     return NULL;
 }
 
+/* destory vm */
 void vm_destroy(struct hash *vm){
     hash_destroy(vm, vm_destroy_func);
 }
 
+/* actual vm destroy */
 static void vm_destroy_func(struct hash_elem *e, void *aux UNUSED){
     struct vm_entry *vme = hash_entry(e, struct vm_entry, elem);
     
@@ -69,6 +77,7 @@ static void vm_destroy_func(struct hash_elem *e, void *aux UNUSED){
     free(vme);
 }
 
+/* load file starting from kaddr, add to vm_entry*/
 bool load_file(void *kaddr, struct vm_entry *vme){
     int read = file_read_at(vme->file, kaddr, vme->read_bytes, vme->offset);
     if(read == (int)vme->read_bytes){

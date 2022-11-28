@@ -130,12 +130,17 @@ struct thread
     int recent_cpu;
 
     struct hash vm;                     /* hash table to manage vm space for thread */
+
+    struct list mmap_list;              /* list for mmap files*/
   };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+/* mmap id */
+int mmap_id_cnt;
 
 /* Used when a process is accessing the file system */
 struct lock file_access_lock;

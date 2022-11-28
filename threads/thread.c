@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #include "threads/fixed-point.h"
 #include "devices/timer.h"
+#include "vm/page.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -146,6 +147,12 @@ thread_init (void)
 
   /* Set up list for sleeping thread */
   list_init(&sleep_thread_list);
+
+  /* Set up mmap count */
+  mmap_id_cnt = 0;
+
+  /* page list initialize*/
+  plist_init();
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -636,6 +643,8 @@ init_thread (struct thread *t, const char *name, int priority)
   for(int i = 0; i < 128; i++){
     t->fd[i] = NULL;
   }
+
+  list_init(&t->mmap_list);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
