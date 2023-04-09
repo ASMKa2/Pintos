@@ -24,8 +24,3 @@ Pintos projects
 * Page Fault Handler
 * Disk Swap
 * Stack Growth
-
-# Project 5
-* Extensible File & File Growth
-* Subdirectory
-* Buffer Cache
