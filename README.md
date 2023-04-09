@@ -1,6 +1,7 @@
 # Pintos
 Pintos projects
 
+## Do not copy this project for HW ##
 
 # Project 1
 * Argument Passing
